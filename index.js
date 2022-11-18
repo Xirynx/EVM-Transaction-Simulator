@@ -1,5 +1,11 @@
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 import express from 'express';
 import { simulate } from './simulator.js';
+import fetch from 'node-fetch';
+
+require('dotenv').config();
+
 const app = express();
 const PORT = 8080;
 
@@ -21,7 +27,7 @@ app.post('/simulate', async (req, res) => {
 	if (!from || !to) { 
 		res.status(400).send({
 			error: 'One or more required parameters not found'
-		})
+		});
 		return;
 	}
 	try {
@@ -36,4 +42,48 @@ app.post('/simulate', async (req, res) => {
 		res.status(500).send({error : err.toString()});
 	}
 	return;
+})
+
+app.post('/retrieve/token-details', async (req, res) => {
+	let { address } = req.body;
+	if (!address) {
+		res.status(400).send({
+			error: 'One or more required parameters not found'
+		});
+		return;
+	}
+	const url = 'https://eth-mainnet.g.alchemy.com/v2/' + process.env.ALCH_API_KEY;
+	const options = {
+		method: 'POST',
+		headers: {accept: 'application/json', 'content-type': 'application/json'},
+		body: JSON.stringify({
+			id: 1,
+			jsonrpc: '2.0',
+			method: 'alchemy_getTokenMetadata',
+			params: [address]
+		})
+	};
+	fetch(url, options)
+		.then(alchemyRes => alchemyRes.json())
+		.then(json => res.status(200).send(json))
+		.catch(err => res.status(500).send(err));
+})
+
+app.post('/retrieve/nft-details', async (req, res) => {
+	let { address, tokenId, tokenType } = req.body;
+	if (!address) {
+		res.status(400).send({
+			error: 'One or more required parameters not found'
+		});
+		return;
+	}
+	const url = `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCH_API_KEY}/getNFTMetadata?${'contractAddress=' + address}${tokenId? '&tokenId=' + tokenId : ''}${tokenType? '&tokenType=' + tokenType : ''}&refreshCache=false`;
+	const options = {
+		method: 'GET',
+		headers: {accept: 'application/json'}
+	}
+	fetch(url, options)
+		.then(alchemyRes => alchemyRes.json())
+		.then(json => res.status(200).send(json))
+		.catch(err => res.status(500).send(err));
 })
