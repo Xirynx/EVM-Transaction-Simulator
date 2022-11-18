@@ -6,6 +6,8 @@ import fetch from 'node-fetch';
 
 require('dotenv').config();
 
+const alchemyNodeURL = `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCH_API_KEY}`;
+
 const app = express();
 const PORT = 8080;
 
@@ -26,7 +28,7 @@ app.post('/simulate', async (req, res) => {
 	}
 	if (!from || !to) { 
 		res.status(400).send({
-			error: 'One or more required parameters not found'
+			error: `'from' and 'to' addresses are required parameters`
 		});
 		return;
 	}
@@ -48,11 +50,10 @@ app.post('/retrieve/token-details', async (req, res) => {
 	let { address } = req.body;
 	if (!address) {
 		res.status(400).send({
-			error: 'One or more required parameters not found'
+			error: `'address' is a required parameter`
 		});
 		return;
 	}
-	const url = 'https://eth-mainnet.g.alchemy.com/v2/' + process.env.ALCH_API_KEY;
 	const options = {
 		method: 'POST',
 		headers: {accept: 'application/json', 'content-type': 'application/json'},
@@ -63,7 +64,7 @@ app.post('/retrieve/token-details', async (req, res) => {
 			params: [address]
 		})
 	};
-	fetch(url, options)
+	fetch(alchemyNodeURL, options)
 		.then(alchemyRes => alchemyRes.json())
 		.then(json => res.status(200).send(json))
 		.catch(err => res.status(500).send(err));
@@ -71,18 +72,20 @@ app.post('/retrieve/token-details', async (req, res) => {
 
 app.post('/retrieve/nft-details', async (req, res) => {
 	let { address, tokenId, tokenType } = req.body;
-	if (!address) {
+	if (!address || !tokenId) {
 		res.status(400).send({
-			error: 'One or more required parameters not found'
+			error: `'address' and 'tokenId' addresses are required parameters`
 		});
 		return;
 	}
-	const url = `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCH_API_KEY}/getNFTMetadata?${'contractAddress=' + address}${tokenId? '&tokenId=' + tokenId : ''}${tokenType? '&tokenType=' + tokenType : ''}&refreshCache=false`;
 	const options = {
 		method: 'GET',
 		headers: {accept: 'application/json'}
 	}
-	fetch(url, options)
+	fetch(
+		`${alchemyNodeURL}/getNFTMetadata?${'contractAddress=' + address}${tokenId? '&tokenId=' + tokenId : ''}${tokenType? '&tokenType=' + tokenType : ''}&refreshCache=false`, 
+		options
+	)
 		.then(alchemyRes => alchemyRes.json())
 		.then(json => res.status(200).send(json))
 		.catch(err => res.status(500).send(err));
